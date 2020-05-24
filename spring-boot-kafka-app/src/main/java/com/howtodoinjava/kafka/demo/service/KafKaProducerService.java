@@ -11,7 +11,8 @@ import com.howtodoinjava.kafka.demo.common.AppConstants;
 @Service
 public class KafKaProducerService 
 {
-	private static final Logger logger = LoggerFactory.getLogger(KafKaProducerService.class);
+	private static final Logger logger = 
+			LoggerFactory.getLogger(KafKaProducerService.class);
 	
 	@Autowired
 	private KafkaTemplate<String, String> kafkaTemplate;

@@ -8,10 +8,13 @@ import org.springframework.stereotype.Service;
 import com.howtodoinjava.kafka.demo.common.AppConstants;
 
 @Service
-public class KafKaConsumerService {
-	private final Logger logger = LoggerFactory.getLogger(KafKaConsumerService.class);
+public class KafKaConsumerService 
+{
+	private final Logger logger = 
+			LoggerFactory.getLogger(KafKaConsumerService.class);
 
-	@KafkaListener(topics = AppConstants.TOPIC_NAME, groupId = "group_id")
+	@KafkaListener(topics = AppConstants.TOPIC_NAME, 
+			groupId = AppConstants.GROUP_ID)
 	public void consume(String message) 
 	{
 		logger.info(String.format("Message recieved -> %s", message));
