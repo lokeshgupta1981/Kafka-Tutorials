@@ -48,3 +48,6 @@ hs_err_pid*
 # Misc
 *.swp
 *.prefs
+
+.idea
+*.iml
