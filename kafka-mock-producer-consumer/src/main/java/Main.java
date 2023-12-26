@@ -1,32 +1,29 @@
-import consumer.MyKafkaConsumer;
-import constants.GlobalConstants;
-import producer.MyKafkaProducer;
-import topic.MyTopic;
+import com.howtodoinjava.app.kafka.constants.KafkaConstants;
+import com.howtodoinjava.app.kafka.consumer.MessageConsumer;
+import com.howtodoinjava.app.kafka.producer.MessageProducer;
+import com.howtodoinjava.app.kafka.topic.CreateTopicService;
 
 import java.util.concurrent.ExecutionException;
 
-public class Main
-{
-    public static void main(String[] args) throws InterruptedException, ExecutionException
-    {
-        MyTopic.createTopic(GlobalConstants.TOPIC);
+public class Main {
+  public static void main(String[] args) throws InterruptedException, ExecutionException {
 
-        MyKafkaProducer producer = new MyKafkaProducer(MyKafkaProducer.getProducer());
+    CreateTopicService.createTopic(KafkaConstants.TOPIC_CREATE_ORDER);
+    System.out.println("Topic created");
+    MessageProducer producer = new MessageProducer();
+    System.out.println("MessageProducer created");
+    MessageConsumer consumer = new MessageConsumer();
+    System.out.println("MessageConsumer created");
+    Thread consumerThread = new Thread(() -> consumer.startPolling(KafkaConstants.TOPIC_CREATE_ORDER));
 
-        MyKafkaConsumer consumer = new MyKafkaConsumer(MyKafkaConsumer.getConsumer());
+    consumerThread.start();
 
-        Thread consumerThread = new Thread(() -> consumer.startPolling(GlobalConstants.TOPIC));
-
-        consumerThread.start();
-
-        for (int i = 0; i < 10; i++)
-        {
-            System.out.println("Message Sent to the topic: " +
-                    producer.send(GlobalConstants.TOPIC, "Hello", "Hello World " + i).get().topic());
-        }
-
-        Runtime.getRuntime().addShutdownHook(new Thread(consumer::stopPolling));
-
-        consumerThread.join();
+    for (int i = 0; i < 10; i++) {
+      System.out.println("Message Sent to the topic: " +
+          producer.notifyNewOrderCreated("Hello", "Hello World " + i).get().topic());
     }
+
+    Runtime.getRuntime().addShutdownHook(new Thread(consumer::stopPolling));
+    consumerThread.join();
+  }
 }

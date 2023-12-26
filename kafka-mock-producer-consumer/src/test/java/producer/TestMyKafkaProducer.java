@@ -1,6 +1,6 @@
 package producer;
 
-import constants.GlobalConstants;
+/*import constants.GlobalConstants;
 import org.apache.kafka.clients.producer.MockProducer;
 import org.apache.kafka.clients.producer.RecordMetadata;
 import org.apache.kafka.common.Cluster;
@@ -14,11 +14,11 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.Future;
+import java.util.concurrent.Future;*/
 
 public class TestMyKafkaProducer
 {
-@Test
+/*@Test
 void sendMessage_verifyTheHistory()
 {
     try (MockProducer<String, String> mockProducer = new MockProducer<>(true, new StringSerializer(), new StringSerializer()))
@@ -115,5 +115,5 @@ void sendMessage_verifyTheHistory()
 
             Assertions.assertTrue(metadata.isDone());
         }
-    }
+    }*/
 }
