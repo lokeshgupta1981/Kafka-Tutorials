@@ -1,6 +1,8 @@
 package producer;
 
-/*import consumer.MyKafkaConsumer;
+import com.howtodoinjava.app.db.OrderDB;
+import com.howtodoinjava.app.kafka.constants.KafkaConstants;
+import com.howtodoinjava.app.kafka.consumer.MessageConsumer;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.MockConsumer;
 import org.apache.kafka.clients.consumer.OffsetResetStrategy;
@@ -9,134 +11,98 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
-
-import static constants.GlobalConstants.TOPIC;*/
 
 public class TestMyKafkaConsumer
 {
-    /*@Test
-    void addRecordToTheConsumer_verifyMessageReceived_andConsumerClosed() throws InterruptedException
-    {
-        try (MockConsumer<String, String> mockConsumer = new MockConsumer<>(OffsetResetStrategy.EARLIEST))
-        {
-            var records = new ConcurrentHashMap<Long, ConsumerRecord<String, String>>();
-
-            MyKafkaConsumer kafkaConsumer = new MyKafkaConsumer(mockConsumer, records);
-
-            // start consumer polling
-            Thread consumerThread = new Thread(()->kafkaConsumer.startPolling(TOPIC, 1));
-
-            consumerThread.start();
-
-            mockConsumer.updateBeginningOffsets(Map.of(new TopicPartition(TOPIC, 1), 0L));
-
-            mockConsumer.schedulePollTask(()-> mockConsumer.addRecord(new ConsumerRecord<>(TOPIC, 1, 0, "Hello", "Hello World")));
-
-            TimeUnit.MILLISECONDS.sleep(200); // wait for consumer to poll
-
-            Assertions.assertEquals(1, records.size());
-
-            mockConsumer.schedulePollTask(mockConsumer::close);
-
-            TimeUnit.MILLISECONDS.sleep(200); // wait for consumer to poll
-
-            Assertions.assertTrue(mockConsumer.closed());
-
-        }
-    }
-
-@Test
-void addRecordToTheConsumerWrongPartition_verifyNoMessageReceived() throws InterruptedException
-{
-    try (MockConsumer<String, String> mockConsumer = new MockConsumer<>(OffsetResetStrategy.EARLIEST))
-    {
-        var records = new ConcurrentHashMap<Long, ConsumerRecord<String, String>>();
-
-        MyKafkaConsumer kafkaConsumer = new MyKafkaConsumer(mockConsumer, records);
-
-        // start consumer polling
-        Thread consumerThread = new Thread(()->kafkaConsumer.startPolling(TOPIC, 1));
-
-        consumerThread.start();
-
-        mockConsumer.updateBeginningOffsets(Map.of(new TopicPartition(TOPIC, 1), 0L));
-
-        mockConsumer.schedulePollTask(()-> mockConsumer.addRecord(new ConsumerRecord<>(TOPIC, 0, 0, "Hello", "Hello World")));
-
-        TimeUnit.MILLISECONDS.sleep(200); // wait for consumer to poll
-
-        Assertions.assertEquals(0, records.size());
-
-        mockConsumer.schedulePollTask(mockConsumer::close);
-
-        TimeUnit.MILLISECONDS.sleep(200); // wait for consumer to poll
-
-        Assertions.assertTrue(mockConsumer.closed());
-
-    }
-}
-
-@Test
-void addRecordToTheConsumerWrongTopic_verifyNoMessageReceived() throws InterruptedException
-{
-    try (MockConsumer<String, String> mockConsumer = new MockConsumer<>(OffsetResetStrategy.EARLIEST))
-    {
-        var records = new ConcurrentHashMap<Long, ConsumerRecord<String, String>>();
-
-        MyKafkaConsumer kafkaConsumer = new MyKafkaConsumer(mockConsumer, records);
-
-        // start consumer polling
-        Thread consumerThread = new Thread(()->kafkaConsumer.startPolling(TOPIC, 1));
-
-        consumerThread.start();
-
-        mockConsumer.updateBeginningOffsets(Map.of(new TopicPartition(TOPIC, 1), 0L));
-
-        mockConsumer.schedulePollTask(()-> mockConsumer.addRecord(new ConsumerRecord<>("ABCD", 1, 0, "Hello", "Hello World")));
-
-        TimeUnit.MILLISECONDS.sleep(200); // wait for consumer to poll
-
-        Assertions.assertEquals(0, records.size());
-
-        mockConsumer.schedulePollTask(mockConsumer::close);
-
-        TimeUnit.MILLISECONDS.sleep(200); // wait for consumer to poll
-
-        Assertions.assertTrue(mockConsumer.closed());
-
-    }
-}
 
     @Test
-    void closeConsumer_usingStopPolling() throws InterruptedException
+    void addOrder_verifyOrderStored()
     {
-        try (MockConsumer<String, String> mockConsumer = new MockConsumer<>(OffsetResetStrategy.EARLIEST))
+        try (var mockConsumer = new MockConsumer<Long, String>(OffsetResetStrategy.EARLIEST); var consumer = new MessageConsumer(mockConsumer))
         {
-            var records = new ConcurrentHashMap<Long, ConsumerRecord<String, String>>();
+            OrderDB orderDB = new OrderDB(consumer);
 
-            MyKafkaConsumer kafkaConsumer = new MyKafkaConsumer(mockConsumer, records);
+            orderDB.startDB(1);
 
-            // start consumer polling
-            Thread consumerThread = new Thread(()->kafkaConsumer.startPolling(TOPIC, 1));
+            mockConsumer.updateBeginningOffsets(Map.of(new TopicPartition(KafkaConstants.TOPIC_CREATE_ORDER, 1), 0L));
 
-            consumerThread.start();
-
-            mockConsumer.updateEndOffsets(Map.of(new TopicPartition(TOPIC, 1), 0L));
-
-            mockConsumer.schedulePollTask(()-> mockConsumer.addRecord(new ConsumerRecord<>(TOPIC, 1, 0, "Hello", "Hello World")));
+            mockConsumer.schedulePollTask(() -> mockConsumer.addRecord(new ConsumerRecord<>(KafkaConstants.TOPIC_CREATE_ORDER, 1, 0, 1L, "Product 1")));
 
             TimeUnit.MILLISECONDS.sleep(200); // wait for consumer to poll
 
-            Assertions.assertEquals(1, records.size());
+            Assertions.assertEquals(1, orderDB.getOrders().size());
+        }
+        catch (Exception e)
+        {
+            e.printStackTrace();
+        }
+    }
 
-            kafkaConsumer.stopPolling();
+    @Test
+    void startDBOnDifferentPartition_verifyNoOrderStored()
+    {
+        try (var mockConsumer = new MockConsumer<Long, String>(OffsetResetStrategy.EARLIEST); var consumer = new MessageConsumer(mockConsumer))
+        {
+            OrderDB orderDB = new OrderDB(consumer);
 
-            TimeUnit.MILLISECONDS.sleep(200);
+            orderDB.startDB(1);
+
+            mockConsumer.updateBeginningOffsets(Map.of(new TopicPartition(KafkaConstants.TOPIC_CREATE_ORDER, 1), 0L));
+
+            mockConsumer.schedulePollTask(() -> mockConsumer.addRecord(new ConsumerRecord<>(KafkaConstants.TOPIC_CREATE_ORDER, 2, 0, 1L, "Product 1")));
+
+            TimeUnit.MILLISECONDS.sleep(200); // wait for consumer to poll
+
+            Assertions.assertEquals(0, orderDB.getOrders().size());
+        }
+        catch (Exception e)
+        {
+            e.printStackTrace();
+        }
+    }
+
+    @Test
+    void addOrderWithDifferentTopic_verifyNoOrderStored()
+    {
+        try (var mockConsumer = new MockConsumer<Long, String>(OffsetResetStrategy.EARLIEST); var consumer = new MessageConsumer(mockConsumer))
+        {
+            OrderDB orderDB = new OrderDB(consumer);
+
+            orderDB.startDB(1);
+
+            mockConsumer.updateBeginningOffsets(Map.of(new TopicPartition(KafkaConstants.TOPIC_CREATE_ORDER, 1), 0L));
+
+            mockConsumer.schedulePollTask(() -> mockConsumer.addRecord(new ConsumerRecord<>(KafkaConstants.TOPIC_CREATE_ORDER + "-1", 2, 0, 1L, "Product 1")));
+
+            TimeUnit.MILLISECONDS.sleep(200); // wait for consumer to poll
+
+            Assertions.assertEquals(0, orderDB.getOrders().size());
+        }
+        catch (Exception e)
+        {
+            e.printStackTrace();
+        }
+    }
+
+    @Test
+    void testStopOrderDB()
+    {
+        try (var mockConsumer = new MockConsumer<Long, String>(OffsetResetStrategy.EARLIEST); var consumer = new MessageConsumer(mockConsumer))
+        {
+            OrderDB orderDB = new OrderDB(consumer);
+
+            orderDB.startDB(1);
+
+            orderDB.stopDB();
+
+            TimeUnit.MILLISECONDS.sleep(200); // wait for consumer to poll
 
             Assertions.assertTrue(mockConsumer.closed());
-
         }
-    }*/
+        catch (Exception e)
+        {
+            e.printStackTrace();
+        }
+    }
 }

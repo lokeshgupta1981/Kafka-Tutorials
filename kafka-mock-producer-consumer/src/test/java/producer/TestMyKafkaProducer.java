@@ -1,11 +1,13 @@
 package producer;
 
-/*import constants.GlobalConstants;
+import com.howtodoinjava.app.kafka.constants.KafkaConstants;
+import com.howtodoinjava.app.kafka.producer.MessageProducer;
+import com.howtodoinjava.app.service.OrderService;
 import org.apache.kafka.clients.producer.MockProducer;
-import org.apache.kafka.clients.producer.RecordMetadata;
 import org.apache.kafka.common.Cluster;
 import org.apache.kafka.common.PartitionInfo;
 import org.apache.kafka.common.errors.InvalidTopicException;
+import org.apache.kafka.common.serialization.LongSerializer;
 import org.apache.kafka.common.serialization.StringSerializer;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -13,42 +15,50 @@ import org.junit.jupiter.api.Test;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.Future;*/
 
 public class TestMyKafkaProducer
 {
-/*@Test
-void sendMessage_verifyTheHistory()
-{
-    try (MockProducer<String, String> mockProducer = new MockProducer<>(true, new StringSerializer(), new StringSerializer()))
-    {
-        MyKafkaProducer kafkaProducer = new MyKafkaProducer(mockProducer);
-
-        kafkaProducer.send(GlobalConstants.TOPIC, "Hello", "Hello World");
-
-        Assertions.assertEquals(1, mockProducer.history().size());
-    }
-}
-
     @Test
-    void sendMessage_verifyTheTopic() throws ExecutionException, InterruptedException
+    void createOrder_verifyOrderCreated()
     {
-        try (MockProducer<String, String> mockProducer = new MockProducer<>(true, new StringSerializer(), new StringSerializer()))
+        try (var mockProducer = new MockProducer<>(true, new LongSerializer(), new StringSerializer()); var producer = new MessageProducer(mockProducer))
         {
-            MyKafkaProducer kafkaProducer = new MyKafkaProducer(mockProducer);
+            OrderService orderService = new OrderService(producer);
 
-            Future<RecordMetadata> metadata = kafkaProducer.send(GlobalConstants.TOPIC, "Hello", "Hello World");
+            orderService.createOrder(1, "Product 1");
 
-            Assertions.assertEquals(metadata.get().topic(), mockProducer.history().get(0).topic());
+            Assertions.assertEquals(1, mockProducer.history().size());
+        }
+        catch (Exception e)
+        {
+            e.printStackTrace();
         }
     }
 
     @Test
-    void sendMessageWithDifferentKeys_verifySentToDifferentTopicPartition() throws ExecutionException, InterruptedException
+    void createOrder_verifyTheTopic()
     {
-        PartitionInfo partitionInfo0 = new PartitionInfo(GlobalConstants.TOPIC, 0, null, null, null);
-        PartitionInfo partitionInfo1 = new PartitionInfo(GlobalConstants.TOPIC, 1, null, null, null);
+        try (var mockProducer = new MockProducer<>(true, new LongSerializer(), new StringSerializer()); var producer = new MessageProducer(mockProducer))
+        {
+            OrderService orderService = new OrderService(producer);
+
+            var metadata = orderService.createOrder(1, "Product 1");
+
+            Assertions.assertEquals(1, mockProducer.history().size());
+
+            Assertions.assertEquals(metadata.get().topic(), mockProducer.history().get(0).topic());
+        }
+        catch (Exception e)
+        {
+            e.printStackTrace();
+        }
+    }
+
+    @Test
+    void createOrderWithDifferentOrderID_verifySentToDifferentTopicPartition()
+    {
+        PartitionInfo partitionInfo0 = new PartitionInfo(KafkaConstants.TOPIC_CREATE_ORDER, 0, null, null, null);
+        PartitionInfo partitionInfo1 = new PartitionInfo(KafkaConstants.TOPIC_CREATE_ORDER, 1, null, null, null);
 
         List<PartitionInfo> list = new ArrayList<>();
 
@@ -57,26 +67,30 @@ void sendMessage_verifyTheHistory()
 
         Cluster kafkaCluster = new Cluster("id1", new ArrayList<>(), list, Collections.emptySet(), Collections.emptySet());
 
-        try (MockProducer<String, String> mockProducer = new MockProducer<>(kafkaCluster, true, new StringSerializer(), new StringSerializer()))
+        try (var mockProducer = new MockProducer<>(kafkaCluster, true, new LongSerializer(), new StringSerializer()); var producer = new MessageProducer(mockProducer))
         {
-            MyKafkaProducer kafkaProducer = new MyKafkaProducer(mockProducer);
+            OrderService orderService = new OrderService(producer);
 
-            Future<RecordMetadata> metadata1 = kafkaProducer.send(GlobalConstants.TOPIC, "New World", "Hello World");
+            var metadata1 = orderService.createOrder(1, "Product 1");
 
-            Future<RecordMetadata> metadata2 = kafkaProducer.send(GlobalConstants.TOPIC, "Hello World", "Hello World");
+            var metadata2 = orderService.createOrder(3, "Product 11");
 
             Assertions.assertNotEquals(metadata1.get().partition(), metadata2.get().partition());
+        }
+        catch (Exception e)
+        {
+            e.printStackTrace();
         }
     }
 
     @Test
-    void sendMessage_raiseException_verifyException()
+    void createOrder_raiseException_verifyException()
     {
-        try (MockProducer<String, String> mockProducer = new MockProducer<>(false, new StringSerializer(), new StringSerializer()))
+        try (var mockProducer = new MockProducer<>(false, new LongSerializer(), new StringSerializer()); var producer = new MessageProducer(mockProducer))
         {
-            MyKafkaProducer kafkaProducer = new MyKafkaProducer(mockProducer);
+            OrderService orderService = new OrderService(producer);
 
-            Future<RecordMetadata> metadata = kafkaProducer.send("ABCD", "Hello", "Hello World");
+            var metadata = orderService.createOrder(1, "Product 1");
 
             InvalidTopicException e = new InvalidTopicException();
             mockProducer.errorNext(e);
@@ -90,20 +104,25 @@ void sendMessage_verifyTheHistory()
                 Assertions.assertEquals(e, exception.getCause());
             }
         }
+        catch (Exception e)
+        {
+            e.printStackTrace();
+        }
     }
 
     @Test
-    void sendMessage_withTransaction()
+    void createOrder_commitTransaction_verifyOrderCreated()
     {
-        try (MockProducer<String, String> mockProducer = new MockProducer<>(false, new StringSerializer(), new StringSerializer()))
+
+        try (var mockProducer = new MockProducer<>(false, new LongSerializer(), new StringSerializer()); var producer = new MessageProducer(mockProducer))
         {
-            MyKafkaProducer kafkaProducer = new MyKafkaProducer(mockProducer);
+            OrderService orderService = new OrderService(producer);
 
             mockProducer.initTransactions();
 
             mockProducer.beginTransaction();
 
-            Future<RecordMetadata> metadata = kafkaProducer.send(GlobalConstants.TOPIC, "Hello", "Hello World");
+            var metadata = orderService.createOrder(1, "Product 1");
 
             Assertions.assertFalse(metadata.isDone());
 
@@ -115,5 +134,9 @@ void sendMessage_verifyTheHistory()
 
             Assertions.assertTrue(metadata.isDone());
         }
-    }*/
+        catch (Exception e)
+        {
+            e.printStackTrace();
+        }
+    }
 }
