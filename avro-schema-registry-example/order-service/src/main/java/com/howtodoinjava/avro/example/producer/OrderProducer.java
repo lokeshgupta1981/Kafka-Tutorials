@@ -49,7 +49,7 @@ public class OrderProducer {
         .setId(UUID.randomUUID())
         .setFirstName("John")
         .setLastName("Doe")
-        .setMiddleName("TestMiddleName")
+        //.setMiddleName("TestMiddleName")
         .setOrderedTime(Instant.now())
         .setStatus("NEW")
         .build();

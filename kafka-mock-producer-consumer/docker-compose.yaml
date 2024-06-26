@@ -1,27 +1,25 @@
----
 version: '3'
-services:
-  zookeeper:
-    image: confluentinc/cp-zookeeper:latest
-    container_name: zookeeper
-    environment:
-      ZOOKEEPER_SERVER_ID: 1
-      ZOOKEEPER_CLIENT_PORT: 2181
-      ZOOKEEPER_TICK_TIME: 2000
 
-  broker:
+services:
+  kafka:
     image: confluentinc/cp-kafka:latest
-    container_name: broker
-    ports:
-      - "19092:9092"
-    depends_on:
-      - zookeeper
     environment:
       KAFKA_BROKER_ID: 1
-      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
-      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
-      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://broker:9092,PLAINTEXT_HOST://localhost:19092
+      KAFKA_LISTENERS: PLAINTEXT://:9092
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: 'true'
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
       KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
       KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@localhost:9093
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_NODE_ID: 1
+      CLUSTER_ID: "your-unique-cluster-id"
+    ports:
+      - "9092:9092"
+      - "9093:9093"
+    volumes:
+      - kafka-data:/var/lib/kafka/data
+
+volumes:
+  kafka-data:
